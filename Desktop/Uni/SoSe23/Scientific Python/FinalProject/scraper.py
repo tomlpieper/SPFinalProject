@@ -6,9 +6,6 @@ import pandas as pd
 from loguru import logger
 import time
 
-path = os.getcwd()
-# Specify the category you want to search in
-# category = "herren/schuhe/sneaker"  # replace with the category you want
 
 
 
@@ -71,7 +68,8 @@ def get_cat_overview(url):
 
     for i in cat_urls_uncut_herren:
         i = i.split(sep='\"')
-        i = "https://www.vinted.de{}".format(i[0])
+        cat_urls_cut_herren.append("https://www.vinted.de{}".format(i[0]))
+        cat_names_herren.append(i[0])
 
     print("We found {} categories for women on vinted that we can scrape".format(len(cat_urls_uncut_damen)))
     print("We found {} categories for men vinted that we can scrape".format(len(cat_urls_uncut_herren)))
@@ -90,20 +88,15 @@ def filter_doubles(titles_cut):
         doubles.append((i,c))
 
     set_d = set(doubles)
-    for i in set_d:
-        print(i)
+    # for i in set_d:
+        # print(i)
     names = list(set_d)
     return names
 
-def get_display_titles(cat_names_damen,cat_names_herren, cat_urls_cut_damen, cat_urls_cut_herren):
-    sub_path = path + '/categories'
-    if not os.path.exists(sub_path):
-        os.makedirs(sub_path)
-    # print(sub_path)
+def get_display_titles(cat_urls_cut,cat_names):
 
     display_titles = []
-    # c = 0
-    for url, name in tqdm(zip(cat_urls_cut_damen,cat_names_damen)):
+    for url, name in tqdm(zip(cat_urls_cut,cat_names)):
         # Send HTTP request to site and save the response from server in a response object called r
         r = requests.get(url)
         # c += 1
@@ -126,9 +119,22 @@ def get_display_titles(cat_names_damen,cat_names_herren, cat_urls_cut_damen, cat
         title = title[7:]
         title = title.replace("&amp;","\\u0026")
         titles_cut.append(title)
+    return titles_cut
 
-    titles_cut_with_count = filter_doubles(titles_cut)
-    return titles_cut_with_count
+def get_display_titles_wrapper(cat_names_damen,cat_names_herren, cat_urls_cut_damen, cat_urls_cut_herren):
+    sub_path = path + '/categories'
+    if not os.path.exists(sub_path):
+        os.makedirs(sub_path)
+    # print(sub_path)
+
+    display_titles_damen = get_display_titles(cat_urls_cut_damen,cat_names_damen)
+    display_titles_herren = get_display_titles(cat_urls_cut_herren,cat_names_herren)
+
+    
+    titles_cut_with_count_damen = filter_doubles(display_titles_damen)
+    titles_cut_with_count_herren = filter_doubles(display_titles_herren)
+
+    return titles_cut_with_count_damen, titles_cut_with_count_herren
 
 
 
@@ -145,9 +151,10 @@ def get_single_property(str:str,p:str):
 
 
 
-def get_dataframe(url, names,properties):
+def get_dataframe(url, names, properties):
 
     index_page = get_html_from_url(url)
+
     for i in names:
         start = 0
         for j in range(i[1]):
@@ -181,6 +188,8 @@ def get_dataframe(url, names,properties):
 
 if __name__ == "__main__":
 
+    path = os.getcwd()
+
     # Define the URL of the site
     url = f"https://www.vinted.de/"
     properties = ['id','title','code','item_count','url']
@@ -188,13 +197,16 @@ if __name__ == "__main__":
     # Get CatNames
     cat_urls_cut_damen, cat_urls_cut_herren, cat_names_damen, cat_names_herren = get_cat_overview(url)
 
-    display_titles = get_display_titles(cat_names_damen,cat_names_herren,cat_urls_cut_damen, cat_urls_cut_herren)
+    display_titles_women, display_titles_men = get_display_titles_wrapper(cat_names_damen,cat_names_herren,cat_urls_cut_damen, cat_urls_cut_herren)
 
-    dfs = list(get_dataframe(url, display_titles,properties))
-    combined = pd.concat(dfs)
+    
+    dfs_women = list(get_dataframe(url, display_titles_women,properties))
+    dfs_men = list(get_dataframe(url, display_titles_men,properties))
+    combined_women = pd.concat(dfs_women)
+    combined_men = pd.concat(dfs_men)
 
     # Check that there is no duplicates in list and have a look into the df
-    print( True in combined['id'].duplicated())
-    print(combined.head())
+    print( True in combined_women['id'].duplicated())
+    print(combined_women.head())
 
 

@@ -31,10 +31,24 @@ def get_html_from_url(url):
     # The selector depends on the structure of the webpage, inspect the webpage to find the right selector
     offers = soup.select('div.offer')
 
+    while True:
+        response = requests.get(url)
 
-    # Get HTML text
-    page = requests.get(url)
-    return page.text
+        if response.status_code == 429:  # HTTP 429 means Too Many Requests
+            print("Hit rate limit, sleeping for a bit...")
+            time.sleep(10)  # Wait for 10 seconds before trying again
+            continue
+
+        # If the response was not a 429, break the loop
+        break
+
+    # You might also want to check here if the response was a 200 OK
+    # If not, you could raise an exception or return some default value
+    if response.status_code != 200:
+        print(f"Got unexpected status code {response.status_code}")
+        return None
+
+    return response.text
 
 
 def find_all(string, substring):
@@ -189,7 +203,7 @@ def get_dataframe(url, names, properties):
             yield df
 
 
-def get_dataframe_category(html,subs):
+def get_dataframe_category(html,subs, props):
 
     for i in subs:
         dict_props = {}
@@ -205,7 +219,7 @@ def get_dataframe_category(html,subs):
         sub = sub.replace("\"","")
 
         # Obtain all single desired properties of substring
-        for p in properties_announce:
+        for p in props:
             name, value = get_single_property(sub, p)
             dict_props[p] = value
 
@@ -217,11 +231,11 @@ def get_dataframe_category(html,subs):
         yield df
 
 
-def get_announces_by_category(category_id, nr_pages):
+def get_announces_by_category(category_id, nr_pages, props):
 
     properties_announce = ['id','title','price','brand_title','size_title','user:id','login','profile_url'] 
 
-    for page in tqdm(range(nr_pages_to_scrape)):
+    for page in tqdm(range(nr_pages)):
         try:
                 
             url = "https://www.vinted.de/catalog?catalog[]={}&page{}".format(category_id,page+1)
@@ -233,11 +247,11 @@ def get_announces_by_category(category_id, nr_pages):
             unique_id_references = ["\"id\":"+i for i in l]
             # print(unique_id_references)
 
-            announces = list(get_dataframe_category(html=html_string, subs=unique_id_references))
+            announces = list(get_dataframe_category(html=html_string, subs=unique_id_references, props= props))
 
             announces_df = pd.concat(announces)
             # print(announces_df.head())
-            time.sleep(1)
+            # time.sleep(2)
             yield announces_df
             
         except Exception as e:
@@ -256,6 +270,8 @@ def get_items_ids(page):
     sub = splts[0]
     
     splt = sub.split(",")
+    # time.sleep(0.2)
+    # time.sleep(1)
     for i in splt:
         yield i
 
@@ -278,6 +294,7 @@ if __name__ == "__main__":
     # Define the URL of the site
     url = f"https://www.vinted.de/"
     properties = ['id','title','code','item_count','url']
+    properties_announce = ['id','title','price','brand_title','size_title','user:id','login','profile_url'] 
 
     # Get CatNames
     cat_urls_cut_damen, cat_urls_cut_herren, cat_names_damen, cat_names_herren = get_cat_overview(url)
@@ -296,17 +313,32 @@ if __name__ == "__main__":
     df = pd.concat([combined_women, combined_men])
 
     # Check that there is no duplicates in list and have a look into the df
-    print( True in df['id'].duplicated())
-    print(df.head())
-    print(df.shape[0])
+  
     db = DB_Connector(username=username,password=password,hostname=hostname)
-
     db.save_data(df)
+
+
+    # ==================================================
+    # ========= Get announces by category ==============
+    # ==================================================
+
+    cat_ids = df['id']
+    # cat_ids = cat_ids[cat_idss['id'].notna()]
+    cat_ids = cat_ids.head()
+    print(cat_ids)
+    for i in cat_ids:
+        
+        announces = list(get_announces_by_category(i, 10, properties_announce))
+        df = pd.concat(announces)
+        df['cat_id'] = i
+        db.save_data(df)
+
     test_df = db.retrieve_data(date=date.today())
     df = pd.DataFrame(test_df)
     print(df)
     print(type(df))
     print(df.shape[0])
+    
 
 
 

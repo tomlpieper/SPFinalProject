@@ -5,6 +5,9 @@ from tqdm import tqdm
 import pandas as pd
 from loguru import logger
 import time
+import datetime
+from datetime import date
+from db_connector import DB_Connector
 
 
 
@@ -95,23 +98,25 @@ def filter_doubles(titles_cut):
 
 def get_display_titles(cat_urls_cut,cat_names):
 
+    c = 0
     display_titles = []
     for url, name in tqdm(zip(cat_urls_cut,cat_names)):
-        # Send HTTP request to site and save the response from server in a response object called r
-        r = requests.get(url)
-        # c += 1
-        # print(c)
-        
-        # Get the index of display title 
-        index_title = r.text.find("<title>")
-        title_uncut = r.text[index_title:index_title+100]
-        splt = title_uncut.split(sep=" |")
-        display_titles.append(splt[0])
+        if c <= 10:
+            # Send HTTP request to site and save the response from server in a response object called r
+            r = requests.get(url)
+            c += 1
+            # print(c)
+            
+            # Get the index of display title 
+            index_title = r.text.find("<title>")
+            title_uncut = r.text[index_title:index_title+100]
+            splt = title_uncut.split(sep=" |")
+            display_titles.append(splt[0])
 
-        # Create a BeautifulSoup object and specify the parser      
-        soup = BeautifulSoup(r.text, 'html.parser')
-        filename = "%s.txt" % name[1:]
-        filename = filename.replace("/","_")
+            # Create a BeautifulSoup object and specify the parser      
+            soup = BeautifulSoup(r.text, 'html.parser')
+            filename = "%s.txt" % name[1:]
+            filename = filename.replace("/","_")
 
 
     titles_cut = []
@@ -184,9 +189,89 @@ def get_dataframe(url, names, properties):
             yield df
 
 
+def get_dataframe_category(html,subs):
+
+    for i in subs:
+        dict_props = {}
+        ind = html.find(i)
+        
+        # Get rough length to be cut 
+        sub = html[ind:ind+5000]
+        splt = sub.split("\",\"content_source\"")
+        sub = splt[0]    
+
+
+        sub = sub.replace("{","")
+        sub = sub.replace("\"","")
+
+        # Obtain all single desired properties of substring
+        for p in properties_announce:
+            name, value = get_single_property(sub, p)
+            dict_props[p] = value
+
+
+        # convert the dictionary to a pandas DataFrame
+        df = pd.DataFrame(dict_props, index=[0])
+        # print(df.head())
+
+        yield df
+
+
+def get_announces_by_category(category_id, nr_pages):
+
+    properties_announce = ['id','title','price','brand_title','size_title','user:id','login','profile_url'] 
+
+    for page in tqdm(range(nr_pages_to_scrape)):
+        try:
+                
+            url = "https://www.vinted.de/catalog?catalog[]={}&page{}".format(category_id,page+1)
+            # print(url)
+            html_string = get_html_from_url(url)
+            # print(html_string)
+
+            l = list(get_items_ids(html_string))
+            unique_id_references = ["\"id\":"+i for i in l]
+            # print(unique_id_references)
+
+            announces = list(get_dataframe_category(html=html_string, subs=unique_id_references))
+
+            announces_df = pd.concat(announces)
+            # print(announces_df.head())
+            time.sleep(1)
+            yield announces_df
+            
+        except Exception as e:
+            logger.exception(e)
+
+def get_items_ids(page):
+    length = 1500
+    s = "{\"catalogItems\":{\"ids\":"
+    index = page.find(s)
+    sub = page[index:index+length]
+
+    # Remove everything around the ids
+    splts = sub.split("[")
+    sub = splts[1]
+    splts = sub.split("]")
+    sub = splts[0]
+    
+    splt = sub.split(",")
+    for i in splt:
+        yield i
+
+
+
+
 
 
 if __name__ == "__main__":
+
+
+# Get MongoDB username, password, and hostname from environment variables
+    username = os.environ['MONGO_USERNAME']
+    password = os.environ['MONGO_PASSWORD']
+    hostname = os.environ['MONGO_HOSTNAME']
+
 
     path = os.getcwd()
 
@@ -205,8 +290,25 @@ if __name__ == "__main__":
     combined_women = pd.concat(dfs_women)
     combined_men = pd.concat(dfs_men)
 
+    combined_women['gender'] = 'w'
+    combined_men['gender'] = 'm'
+
+    df = pd.concat([combined_women, combined_men])
+
     # Check that there is no duplicates in list and have a look into the df
-    print( True in combined_women['id'].duplicated())
-    print(combined_women.head())
+    print( True in df['id'].duplicated())
+    print(df.head())
+    print(df.shape[0])
+    db = DB_Connector(username=username,password=password,hostname=hostname)
+
+    db.save_data(df)
+    test_df = db.retrieve_data(date=date.today())
+    df = pd.DataFrame(test_df)
+    print(df)
+    print(type(df))
+    print(df.shape[0])
+
+
+
 
 

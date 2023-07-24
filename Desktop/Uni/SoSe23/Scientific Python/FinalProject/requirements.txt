@@ -1,0 +1,6 @@
+pymongo
+requests
+bs4
+tqdm
+pandas
+loguru

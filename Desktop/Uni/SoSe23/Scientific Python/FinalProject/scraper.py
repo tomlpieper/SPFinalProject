@@ -8,6 +8,7 @@ import time
 import datetime
 from datetime import date
 from db_connector import DB_Connector
+from plotter import DataFramePlotter
 
 
 
@@ -276,7 +277,15 @@ def get_items_ids(page):
         yield i
 
 
-
+def save_to_Database(db,df):    
+    print("Function called", flush=True)
+    today = date.today()
+    docs = None
+    docs = db.retrieve_data(today)
+    if docs != None:
+        print(docs,flush=True)
+    else:
+        print("Returned nothing form db", flush=True)
 
 
 
@@ -288,8 +297,10 @@ if __name__ == "__main__":
     password = os.environ['MONGO_PASSWORD']
     hostname = os.environ['MONGO_HOSTNAME']
 
+    db = DB_Connector(username=username,password=password,hostname=hostname)
 
     path = os.getcwd()
+
 
     # Define the URL of the site
     url = f"https://www.vinted.de/"
@@ -312,32 +323,45 @@ if __name__ == "__main__":
 
     df = pd.concat([combined_women, combined_men])
 
+    df = df[df['id'] != 'null']
+    df['overview'] = 1
+    print(df.head())
     # Check that there is no duplicates in list and have a look into the df
   
-    db = DB_Connector(username=username,password=password,hostname=hostname)
-    db.save_data(df)
+    # db.save_data(df)
 
 
     # ==================================================
     # ========= Get announces by category ==============
     # ==================================================
-
-    cat_ids = df['id']
+    
+    cat_ids = df['id'].values.tolist()
+    cat_titles = df['title'].values.tolist()
+    
     # cat_ids = cat_ids[cat_idss['id'].notna()]
-    cat_ids = cat_ids.head()
+    cat_ids = cat_ids[:4]
     print(cat_ids)
-    for i in cat_ids:
+    # for i, j in zip(cat_ids, cat_titles):
         
-        announces = list(get_announces_by_category(i, 10, properties_announce))
-        df = pd.concat(announces)
-        df['cat_id'] = i
-        db.save_data(df)
+    #     announces = list(get_announces_by_category(i, 10, properties_announce))
+    #     df_cat = pd.concat(announces)
+    #     df_cat['cat_id'] = i
+    #     df_cat['cat_title'] = j
+    #     df_cat['overview'] = 0
+    #     # db.save_data(df_cat)
+    #     df =  pd.concat([df, df_cat])
 
-    test_df = db.retrieve_data(date=date.today())
-    df = pd.DataFrame(test_df)
+    # test_df = db.retrieve_data(date=date.today())
+    # df = pd.DataFrame(test_df)
+    # df.to_csv('mydf.csv',index=False)
     print(df)
     print(type(df))
     print(df.shape[0])
+
+    plotter = DataFramePlotter(df)
+    plotter.plot_amount_categories_MW()
+
+    db.save_data(df)
     
 
 

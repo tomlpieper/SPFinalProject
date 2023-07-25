@@ -45,12 +45,19 @@ class DB_Connector():
 
     def save_data(self, dataframe):
 
+        
         data_dict = dataframe.to_dict("records")
         today = date.today()
         timestamp = today.strftime("%d/%m/%Y")
         for data in data_dict:
             data['timestamp'] = timestamp
-        self.collection.insert_many(data_dict)
+
+        validation_doc = self.collection.find_one({'timestamp': timestamp})
+        if not validation_doc:
+            self.collection.insert_many(data_dict)
+            print('Successfully saved documents to database.')
+        else: 
+            print('Already saved Data today, nothing is saved')
 
 
 

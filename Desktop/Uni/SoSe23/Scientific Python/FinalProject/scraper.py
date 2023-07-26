@@ -7,7 +7,7 @@ from loguru import logger
 import time
 import datetime
 from datetime import date
-from db_connector import DB_Connector
+# from db_connector import DB_Connector
 from plotter import DataFramePlotter
 
 
@@ -297,7 +297,7 @@ if __name__ == "__main__":
     password = os.environ['MONGO_PASSWORD']
     hostname = os.environ['MONGO_HOSTNAME']
 
-    db = DB_Connector(username=username,password=password,hostname=hostname)
+    # db = DB_Connector(username=username,password=password,hostname=hostname)
 
     path = os.getcwd()
 
@@ -325,6 +325,7 @@ if __name__ == "__main__":
 
     df = df[df['id'] != 'null']
     df['overview'] = 1
+    df['title'] = df['title'].str.replace('\\u0026', '&')
     print(df.head())
     # Check that there is no duplicates in list and have a look into the df
   
@@ -341,15 +342,15 @@ if __name__ == "__main__":
     # cat_ids = cat_ids[cat_idss['id'].notna()]
     cat_ids = cat_ids[:4]
     print(cat_ids)
-    # for i, j in zip(cat_ids, cat_titles):
+    for i, j in zip(cat_ids, cat_titles):
         
-    #     announces = list(get_announces_by_category(i, 10, properties_announce))
-    #     df_cat = pd.concat(announces)
-    #     df_cat['cat_id'] = i
-    #     df_cat['cat_title'] = j
-    #     df_cat['overview'] = 0
-    #     # db.save_data(df_cat)
-    #     df =  pd.concat([df, df_cat])
+        announces = list(get_announces_by_category(i, 10, properties_announce))
+        df_cat = pd.concat(announces)
+        df_cat['cat_id'] = i
+        df_cat['cat_title'] = j
+        df_cat['overview'] = 0
+        # db.save_data(df_cat)
+        df =  pd.concat([df, df_cat])
 
     # test_df = db.retrieve_data(date=date.today())
     # df = pd.DataFrame(test_df)
@@ -360,8 +361,10 @@ if __name__ == "__main__":
 
     plotter = DataFramePlotter(df)
     plotter.plot_amount_categories_MW()
+    plotter.plot_amount_announces_per_category()
+    plotter.plot_average_price_per_category()
 
-    db.save_data(df)
+    # db.save_data(df)
     
 
 

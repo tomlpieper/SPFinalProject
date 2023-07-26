@@ -1,28 +1,30 @@
 version: '3'
 services:
-  db:
-    image: mongo
-    restart: always
-    healthcheck:
-      test: echo 'db.runCommand("ping").ok' | mongo localhost:27017/test --quiet
-      interval: 2s
-      timeout: 3s
-    environment:
-      MONGO_INITDB_ROOT_USERNAME: root
-      MONGO_INITDB_ROOT_PASSWORD: example
+  # db:
+  #   image: mongo
+  #   restart: always
+  #   healthcheck:
+  #     test: echo 'db.runCommand("ping").ok' | mongo localhost:27017/test --quiet
+  #     interval: 2s
+  #     timeout: 3s
+  #   environment:
+  #     MONGO_INITDB_ROOT_USERNAME: root
+  #     MONGO_INITDB_ROOT_PASSWORD: example
 
   python-app:
     build:
       context: ..
       dockerfile: docker/Dockerfile
-    links:
-      - db
-    depends_on:
-      - db
+    # links:
+    #   - db
+    # depends_on:
+    #   - db
     environment:
       - MONGO_USERNAME=root
       - MONGO_PASSWORD=example
       - MONGO_HOSTNAME=db
+    volumes:
+      - /Users/tompieper/Desktop/Uni/SoSe23/Scientific Python/FinalProject:/FinalProject/
 
     # command: bash -c 'python app.py'
     

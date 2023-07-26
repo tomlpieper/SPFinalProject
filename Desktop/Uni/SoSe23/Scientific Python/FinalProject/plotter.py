@@ -18,9 +18,6 @@ class DataFramePlotter:
         df = self.df[self.df['overview'] == 1]
         print(len(df))
 
-        # count_m = df['gender' == 'm']
-        # count_w = df['gender' == 'w']
-        # y = [count_w.shape[0], count_m.shape[0]]
         count_m = df['gender'].value_counts().get('m')
         count_w = df['gender'].value_counts().get('w')
         y = [count_w, count_m]
@@ -28,3 +25,41 @@ class DataFramePlotter:
         fig = ax.get_figure()
         fig.savefig('test.png')
         # plt.clf()
+
+    def plot_amount_announces_per_category(self):
+
+        df = self.df[self.df['overview'] == 1]
+        df = df[df['title'] != '']
+        df = df[df['item_count'] != '']
+        df['item_count'] = df['item_count'].astype(int)
+        fig, ax = plt.subplots(figsize=(40, 20))
+        sns.barplot(data=df, x='title',y='item_count', ax=ax)
+        ax.set_xticklabels(ax.get_xticklabels(), size=8)
+        ax.get_yaxis().get_major_formatter().set_scientific(False)
+        for item in ax.get_xticklabels():
+            item.set_rotation(90)
+        plt.subplots_adjust(bottom=0.3)
+        fig = ax.get_figure()
+        
+        fig.savefig('amount_per_category.png')
+
+
+    def plot_average_price_per_category(self):
+
+        df = self.df[self.df['overview'] == 0]
+        df = df.groupby('cat_title')['price'].mean().reset_index()
+        print(average_price_per_category)
+        # Replace any non-numeric characters
+        df['price'] = df['price'].str.replace('[^0-9.]', '', regex=True)
+        df['price'] = df['price'].astype(float)
+
+        fig, ax = plt.subplots(figsize=(40, 20))
+        sns.barplot(data=df, x='cat_title',y='price', ax=ax)
+        ax.set_xticklabels(ax.get_xticklabels(), size=8)
+        ax.get_yaxis().get_major_formatter().set_scientific(False)
+        for item in ax.get_xticklabels():
+            item.set_rotation(90)
+        plt.subplots_adjust(bottom=0.3)
+        fig = ax.get_figure()
+        
+        fig.savefig('price_per_category.png')

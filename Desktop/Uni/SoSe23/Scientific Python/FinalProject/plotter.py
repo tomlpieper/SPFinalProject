@@ -47,10 +47,10 @@ class DataFramePlotter:
     def plot_average_price_per_category(self):
 
         df = self.df[self.df['overview'] == 0]
+        df['price'] = df['price'].str.replace('[^0-9.]', '', regex=True)
         df = df.groupby('cat_title')['price'].mean().reset_index()
         print(average_price_per_category)
         # Replace any non-numeric characters
-        df['price'] = df['price'].str.replace('[^0-9.]', '', regex=True)
         df['price'] = df['price'].astype(float)
 
         fig, ax = plt.subplots(figsize=(40, 20))

@@ -6,3 +6,6 @@ pandas
 loguru
 seaborn
 matplotlib
+pytelegrambotapi
+pymongo
+numpy

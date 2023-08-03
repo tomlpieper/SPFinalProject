@@ -4,6 +4,7 @@ import time
 from datetime import date
 from pymongo import MongoClient
 import pandas as pd
+from loguru import logger
 
 
 
@@ -26,22 +27,22 @@ class DB_Connector():
 
 
 
-    def test_save_and_retrieve_data(self):
-        # Create a connection
-        # Define some data to save
-        customer_data = {"name": "John", "address": "Highway 37"}
+    # def test_save_and_retrieve_data(self):
+    #     # Create a connection
+    #     # Define some data to save
+    #     customer_data = {"name": "John", "address": "Highway 37"}
         
-        # Save the data
-        collection.insert_one(customer_data)
+    #     # Save the data
+    #     collection.insert_one(customer_data)
         
-        # Retrieve the data
-        result = collection.find_one({"name": "John"})
+    #     # Retrieve the data
+    #     result = collection.find_one({"name": "John"})
         
-        # Check that the data is as expected
-        # print(assert result["name"] == "John")
-        assert result["name"] == "John"
-        print(result)
-        assert result["address"] == "Highway 37"
+    #     # Check that the data is as expected
+    #     # print(assert result["name"] == "John")
+    #     assert result["name"] == "John"
+    #     print(result)
+    #     assert result["address"] == "Highway 37"
 
     def save_data(self, dataframe):
 
@@ -55,19 +56,36 @@ class DB_Connector():
         validation_doc = self.collection.find_one({'timestamp': timestamp})
         if not validation_doc:
             self.collection.insert_many(data_dict)
-            print('Successfully saved documents to database.')
+            logger.success('Successfully saved documents to database.')
         else: 
-            print('Already saved Data today, nothing is saved')
+            logger.warning('Already saved Data today, nothing is saved')
 
 
 
-    def retrieve_data(self,date):
-        # today = date.today()
-        timestamp = date.strftime("%d/%m/%Y")
+    # def retrieve_data(self,date):
+    #     # today = date.today()
+    #     if not type(date) == str:
+    #         timestamp = date.strftime("%d/%m/%Y")
+    #     else: 
+    #         timestamp = date
+    #     r = self.collection.find({'timestamp': timestamp})
+    #     docs = [doc for doc in r]
+    #     return docs
+
+    def retrieve_data(self, date):
+        if not isinstance(date, str):
+            timestamp = date.strftime("%d/%m/%Y")
+        else: 
+            timestamp = date
         r = self.collection.find({'timestamp': timestamp})
         docs = [doc for doc in r]
-        return docs
 
+        # convert list of dictionaries to DataFrame
+        df = pd.DataFrame(docs)
+        
+        # if df.empty:
+        #     return None
 
+        return df
 # # Insert the data into the collection
 # # collection.insert_many(data_dict)

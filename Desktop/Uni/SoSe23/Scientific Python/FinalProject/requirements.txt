@@ -9,3 +9,5 @@ matplotlib
 pytelegrambotapi
 pymongo
 numpy
+pytz
+apscheduler

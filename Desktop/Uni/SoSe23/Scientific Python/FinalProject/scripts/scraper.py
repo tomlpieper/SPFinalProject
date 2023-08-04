@@ -135,23 +135,23 @@ class Scraper():
         display_titles = []
         pbar = tqdm(total=len(cat_urls_cut))
         for url, name in zip(cat_urls_cut,cat_names):
-            # if c <= 50:
-            #     c += 1
-            # Send HTTP request to site and save the response from server in a response object called r
-            r = requests.get(url)
-            # print(c)
-            
-            # Get the index of display title 
-            index_title = r.text.find("<title>")
-            title_uncut = r.text[index_title:index_title+100]
-            splt = title_uncut.split(sep=" |")
-            display_titles.append(splt[0])
+            if c <= 5:
+                c += 1
+                # Send HTTP request to site and save the response from server in a response object called r
+                r = requests.get(url)
+                # print(c)
+                
+                # Get the index of display title 
+                index_title = r.text.find("<title>")
+                title_uncut = r.text[index_title:index_title+100]
+                splt = title_uncut.split(sep=" |")
+                display_titles.append(splt[0])
 
-            # Create a BeautifulSoup object and specify the parser      
-            soup = BeautifulSoup(r.text, 'html.parser')
-            filename = "%s.txt" % name[1:]
-            filename = filename.replace("/","_")
-            pbar.update()
+                # Create a BeautifulSoup object and specify the parser      
+                soup = BeautifulSoup(r.text, 'html.parser')
+                filename = "%s.txt" % name[1:]
+                filename = filename.replace("/","_")
+                pbar.update()
 
         pbar.close()
         titles_cut = []

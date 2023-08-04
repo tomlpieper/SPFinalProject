@@ -13,13 +13,21 @@ import numpy as np
 from matplotlib.ticker import FuncFormatter
 
 class DataFramePlotter:
-    def __init__(self):
+    # def __init__(self):
 
-        # print('Launched Dataframe-Plotter')
-        self.folder_name = "images/" + date.today().strftime("%Y/%m/%d") + '/'
+    #     # print('Launched Dataframe-Plotter')
+    #     self.folder_name = "images/" + date.today().strftime("%Y/%m/%d") + '/'
+    #     if not os.path.exists(self.folder_name):
+    #         os.makedirs(self.folder_name)
+    def __init__(self):
+        # Assuming that this script is in a folder named 'scripts' and 'images' is a sibling folder.
+        current_directory = os.path.dirname(os.path.abspath(__file__))
+        base_directory = os.path.dirname(current_directory)
+        images_directory = os.path.join(base_directory, 'images', date.today().strftime("%Y/%m/%d"))
+        self.folder_name = images_directory + '/'
         if not os.path.exists(self.folder_name):
             os.makedirs(self.folder_name)
-        
+
 
 
     def plot_amount_categories_MW(self, df) -> str:

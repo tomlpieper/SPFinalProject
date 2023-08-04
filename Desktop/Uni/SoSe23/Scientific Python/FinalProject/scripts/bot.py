@@ -228,5 +228,7 @@ class TelegramBotAPI():
 
 
     def launch(self):
-        # Launch the bot with internal function infinity polling, that constantly listens to user messages
+        """
+        Launch the bot listening behaviour in the background so it listens to incoming messages
+        """
         self.bot.infinity_polling()

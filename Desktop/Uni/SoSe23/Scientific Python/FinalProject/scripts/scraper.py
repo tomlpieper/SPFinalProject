@@ -15,18 +15,36 @@ import numpy as np  # for numerical operations
 # from db_connector import DB_Connector  # Local DB Connector Module (File is not provided)
 from plotter import DataFramePlotter  # Local Plotter Module (File is not provided)
 
-# The Scraper Class
+
 class Scraper():
+    """
+        A class used to scrape data from a specific webpage.
+    """
 
     # Class initialization method
     def __init__(self, db_connector):
+        """
+        Initialize the Scraper object.
+
+        Parameters:
+            db_connector: The database connector instance for saving the scraped data.
+        """
         # Connecting to the database
         self.db_connector = db_connector
         # Get current working directory
         self.path = os.getcwd()
 
-    # Method to get HTML from URL
+
     def get_html_from_url(self,url):
+        """
+        Fetch the HTML content of the given URL.
+
+        Parameters:
+            url (str): The target URL to be fetched.
+
+        Returns:
+            str: HTML content of the provided URL.
+        """
         # Headers to send along with the request
         headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.3'}
         # Send HTTP request to site and save the response from server in a response object called r
@@ -60,6 +78,16 @@ class Scraper():
 
     # Method to find all instances of a substring in a string and yield a section of the string around the substring
     def find_all(self,string, substring):
+        """
+        Yield sections of a string around the occurrences of a substring.
+
+        Parameters:
+            string (str): The main string.
+            substring (str): The target substring to find.
+
+        Yields:
+            str: Section of the string around the found substring.
+        """
         start = 0
         while True:
             start = string.find(substring, start)
@@ -70,6 +98,16 @@ class Scraper():
 
     # Method to get an overview of all categories of products for men and women
     def get_cat_overview(self,url):
+        """
+        Extract an overview of product categories for men and women from the given URL.
+
+        Parameters:
+            url (str): The URL to be scraped.
+
+        Returns:
+            tuple: A tuple containing URLs and names for both men and women categories.
+        """
+
         # Get HTML from the URL
         page = self.get_html_from_url(url)
 
@@ -104,6 +142,15 @@ class Scraper():
 
 # Filter for double values, just in case
     def filter_doubles(self,titles_cut):
+        """
+        Filter out duplicates from the provided list.
+
+        Parameters:
+            titles_cut (list): The list of titles.
+
+        Returns:
+            list: A list of unique titles.
+        """
         doubles = []
         for i in titles_cut:
             c = titles_cut.count(i)
@@ -118,6 +165,16 @@ class Scraper():
 
 # For unique ID retireval, we sadly need to get each page and extract the TITLE form the top of th HTML
     def get_display_titles(self,cat_urls_cut,cat_names):
+        """
+        Extract display titles from given category URLs.
+
+        Parameters:
+            cat_urls_cut (list): List of category URLs.
+            cat_names (list): List of category names.
+
+        Returns:
+            list: List of extracted display titles.
+        """
 
         display_titles = []
         c = 0
@@ -153,6 +210,18 @@ class Scraper():
 
 # Wrapper function, to get titles for each category
     def get_display_titles_wrapper(self,cat_names_damen,cat_names_herren, cat_urls_cut_damen, cat_urls_cut_herren):
+        """
+        Wrapper function to retrieve display titles for both genders.
+
+        Parameters:
+            cat_names_damen (list): List of female category names.
+            cat_names_herren (list): List of male category names.
+            cat_urls_cut_damen (list): List of female category URLs.
+            cat_urls_cut_herren (list): List of male category URLs.
+
+        Returns:
+            tuple: Tuple of cleaned titles for both genders.
+        """
 
         # for both genders get the titles
         display_titles_damen = self.get_display_titles(cat_urls_cut_damen,cat_names_damen)
@@ -167,6 +236,17 @@ class Scraper():
 
     # A HTML parsing function, that gets a string and returns a property as substring, as well as the name of the property 
     def get_single_property(self, str:str,p:str):
+        """
+        Extract a property as a substring from the provided string.
+
+        Parameter:
+            str (str): The main string.
+            p (str): Property to be extracted.
+
+        Returns:
+            tuple: A tuple containing the property name and its value.
+        """
+
         i = str.find(p)
         sub = str[i:]
         sub = sub.split(",")
@@ -180,7 +260,17 @@ class Scraper():
 
     # Here for the overview page, we try to get the general info, that we can already exctract, e.g. item count, title, code etc.
     def get_dataframe(self, url, names, properties):
+        """
+        Generate a dataframe containing general info extracted from the given URL.
 
+        Parameter:
+            url (str): The URL to scrape.
+            names (list): List of names to look for.
+            properties (list): List of properties to be extracted.
+
+        Yields:
+            DataFrame: A dataframe containing the extracted data.
+        """
         # Get the HTMl to parse
         index_page = self.get_html_from_url(url)
 
@@ -214,6 +304,17 @@ class Scraper():
 
     # Here we have the same function that yields a pandas.df from wanted properties of a single category by HTML parsing
     def get_dataframe_category(self, html,subs, props):
+        """
+        Yield a dataframe containing desired properties extracted from a single category HTML content.
+
+        Parameter:
+            html (str): The HTML content.
+            subs (list): List of substrings to look for.
+            props (list): List of properties to extract.
+
+        Yields:
+            DataFrame: A dataframe containing the extracted data.
+        """
 
         for i in subs:
             dict_props = {}
@@ -241,6 +342,17 @@ class Scraper():
 
     # Here we get more detailed values for the announces of a single category and again yield it as a pandas.df
     def get_announces_by_category(self, category_id, nr_pages, props):
+        """
+        Extract detailed values for announces of a single category.
+
+        Parameter:
+            category_id (int): The ID of the target category.
+            nr_pages (int): Number of pages to scrape.
+            props (list): List of properties to extract.
+
+        Yields:
+            DataFrame: A dataframe containing the extracted data.
+        """
 
         # The properties, we want to know, that we could filter by
         properties_announce = ['id','title','price','brand_title','size_title','user:id','login','profile_url'] 
@@ -269,6 +381,15 @@ class Scraper():
     # Functoin to retrieve the IDs that each category has, they are needed to get the urls, if we want to scrape page 2 or bigger of some category
     # basically consists of a lot of substring parsing and splitting
     def get_items_ids(self, page):
+        """
+        Retrieve the IDs of items present in the provided HTML page.
+
+        Parameter:
+            page (str): The HTML content of the page.
+
+        Yields:
+            int: ID of the item.
+        """
         length = 1500
         s = "{\"catalogItems\":{\"ids\":"
         index = page.find(s)
@@ -286,6 +407,14 @@ class Scraper():
 
     # Scraper internal function to access and save data to our local database
     def save_to_Database(self, db,df):    
+        """
+        Save the scraped data to the local database.
+
+        Parameter:
+            db: Database instance.
+            df (DataFrame): The dataframe containing the data to be saved.
+        """
+
         print("Function called", flush=True)
         today = date.today()
         docs = None
@@ -300,9 +429,13 @@ class Scraper():
 
     # Function to be called from the outside, basically wrapper that uses all the predefined functions to scrape vinted.de
     def scrape(self, scheduled):
+        """
+        Main scraping function. Orchestrates the scraping process.
+
+        Parameter:
+            scheduled: Determines if the scraping is scheduled or manual.
+        """
  
-
-
         # Define the URL of the site
         url = f"https://www.vinted.de/"
         properties = ['id','title','code','item_count','url']

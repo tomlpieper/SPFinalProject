@@ -35,6 +35,10 @@ class DataFramePlotter:
     def plot_amount_categories_MW(self, df) -> str:
         """
         Plot the number of categories for men and women
+
+        Parameters:
+        ----------
+        dataframe (pandas.df): dataframe to analyse
         """
 
         image_name = self.folder_name + 'amounts_category_MW.jpg'
@@ -64,6 +68,10 @@ class DataFramePlotter:
     def plot_amount_announces_per_category(self, df) -> str:
         """
         Plot the number of announcements per category
+
+        Parameters:
+        ----------
+        dataframe (pandas.df): dataframe to analyse
         """
 
         image_name = self.folder_name + 'amounts_per_category.jpg'
@@ -106,6 +114,10 @@ class DataFramePlotter:
     def plot_average_price_per_category(self, df) -> str:
         """
         Plot the average price per category
+
+        Parameters:
+        ----------
+        dataframe (pandas.df): dataframe to analyse
         """
 
         image_name = self.folder_name + 'average_price_per_category.jpg'
@@ -156,6 +168,10 @@ class DataFramePlotter:
     def plot_announces_per_user(self, df) -> str:
         """
         Plot the number of announcements per user
+
+        Parameters:
+        ----------
+        dataframe (pandas.df): dataframe to analyse
         """
 
         image_name = self.folder_name + 'announces_per_user_top200.jpg'

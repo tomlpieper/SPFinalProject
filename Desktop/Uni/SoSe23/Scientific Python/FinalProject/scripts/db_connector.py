@@ -14,6 +14,12 @@ class DB_Connector():
     def __init__(self, username, password, hostname):
         """
         Initialize the database connector with MongoDB connection details.
+
+        Parameters:
+        ----------
+        username (str): username of the db
+        hostanem (str): password of the db
+        password (str): hostname of the db
         """
 
         self.username = username
@@ -34,6 +40,10 @@ class DB_Connector():
     def save_data(self, dataframe):
         """
         Save the data in the provided dataframe to MongoDB.
+
+        Parameters:
+        ----------
+        dataframe (pandas.df): dataframe with data to save
         """
 
         # Convert dataframe to a list of dictionaries
@@ -60,7 +70,11 @@ class DB_Connector():
 
     def retrieve_data(self, date):
         """
-        Retrieve data for the specified date from MongoDB.
+        Retrieve data for the specified date from MongoDB. Returns pandas.df
+
+        Parameters:
+        ----------
+        date (date/str): date to retrieve data from
         """
 
         # Format the date as DD/MM/YYYY

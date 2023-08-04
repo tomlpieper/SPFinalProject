@@ -1,75 +1,64 @@
-import requests
-from bs4 import BeautifulSoup
-import os
-from tqdm import tqdm
-import pandas as pd
-from loguru import logger
-import time
-import datetime
-from datetime import date
-import seaborn as sns
-import matplotlib.pyplot as plt
-import numpy as np
+# Required Libraries
+import requests  # to send HTTP requests
+from bs4 import BeautifulSoup  # for parsing HTML documents
+import os  # for OS-level operations
+from tqdm import tqdm  # for progress bar
+import pandas as pd  # for data manipulation and analysis
+from loguru import logger  # for logging
+import time  # for time-related tasks
+import datetime  # for working with dates
+from datetime import date  # to get the date
+import seaborn as sns  # for data visualization
+import matplotlib.pyplot as plt  # for creating static, animated, and interactive visualizations in Python
+import numpy as np  # for numerical operations
 
-# from db_connector import DB_Connector
-from plotter import DataFramePlotter
+# from db_connector import DB_Connector  # Local DB Connector Module (File is not provided)
+from plotter import DataFramePlotter  # Local Plotter Module (File is not provided)
 
-
+# The Scraper Class
 class Scraper():
 
+    # Class initialization method
     def __init__(self, db_connector):
-
+        # Connecting to the database
         self.db_connector = db_connector
+        # Get current working directory
         self.path = os.getcwd()
 
-
-
-
+    # Method to get HTML from URL
     def get_html_from_url(self,url):
-
-
-        headers = {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.3'}
-
+        # Headers to send along with the request
+        headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.3'}
         # Send HTTP request to site and save the response from server in a response object called r
         r = requests.get(url, headers=headers)
-
         # Create a BeautifulSoup object and specify the parser
         soup = BeautifulSoup(r.text, 'html.parser')
-
         # Extract the desired info (the offers in this case)
         # The selector depends on the structure of the webpage, inspect the webpage to find the right selector
         offers = soup.select('div.offer')
 
+        # Keep trying the request if a rate limit or server error is encountered
         while True:
             response = requests.get(url)
 
-            if response.status_code == 429:  # HTTP 429 means Too Many Requests / 500 server error
+            # HTTP 429 means Too Many Requests / 500 server error
+            if response.status_code == 429:
                 print("Hit rate limit, sleeping for a bit...")
-                time.sleep(5)  # Wait for 10 seconds before trying again
+                time.sleep(5)  # Wait for 5 seconds before trying again
                 continue
-
-
+            # Any other error than rate limit
             if response.status_code != 200:
                 print("Encountered Server Error, sleeping for a bit longer...")
-                time.sleep(240)  # Wait for 10 seconds before trying again
+                time.sleep(240)  # Wait for 240 seconds before trying again
                 continue
 
-            # If the response was not a 429, break the loop
+            # If the response was not a 429 or 500, break the loop
             break
 
-        # You might also want to check here if the response was a 200 OK
-        # If not, you could raise an exception or return some default value
-        # if response.status_code != 200:
-        #     print(f"Got unexpected status code {response.status_code}")
-        #     return None
-
-        # Add a delay between 1 and 3 seconds before next request
-        # time.sleep(random.uniform(1, 3))
-
+        # Return the text of the response
         return response.text
 
-
+    # Method to find all instances of a substring in a string and yield a section of the string around the substring
     def find_all(self,string, substring):
         start = 0
         while True:
@@ -79,64 +68,61 @@ class Scraper():
             yield string[start:end]
             start += len(substring) # use start += 1 to find overlapping matches
 
-
+    # Method to get an overview of all categories of products for men and women
     def get_cat_overview(self,url):
-
-
+        # Get HTML from the URL
         page = self.get_html_from_url(url)
 
+        # Substrings to look for
         substring_damen, substring_herren = "/damen", "/herren"
 
-
+        # Use the find_all method to get all instances of the substrings
         cat_urls_uncut_damen = set(self.find_all(page, substring_damen))
         cat_urls_uncut_herren = set(self.find_all(page, substring_herren))
 
-
-
+        # Lists to store the final URLs and names
         cat_urls_cut_damen, cat_urls_cut_herren, cat_names_damen, cat_names_herren = [],[],[],[]
 
-
+        # Process the raw URLs to get the final URLs and names
         for i in cat_urls_uncut_damen:
             i = i.split(sep='\"')
             cat_urls_cut_damen.append("https://www.vinted.de{}".format(i[0]))
             cat_names_damen.append(i[0])
-            # print(i)
 
         for i in cat_urls_uncut_herren:
             i = i.split(sep='\"')
             cat_urls_cut_herren.append("https://www.vinted.de{}".format(i[0]))
             cat_names_herren.append(i[0])
 
+        # Print the number of categories found
         print("We found {} categories for women on vinted that we can scrape".format(len(cat_urls_uncut_damen)))
         print("We found {} categories for men vinted that we can scrape".format(len(cat_urls_uncut_herren)))
-        # for name in cat_names_damen:
-        #     print(name)
+
         return cat_urls_cut_damen, cat_urls_cut_herren, cat_names_damen, cat_names_herren
+
         
 
-
+# Filter for double values, just in case
     def filter_doubles(self,titles_cut):
         doubles = []
         for i in titles_cut:
             c = titles_cut.count(i)
-
-                # print("Title: {} occured {} times.".format(i,c))
             doubles.append((i,c))
 
+        # Set function removes doubles from the doubles list
         set_d = set(doubles)
-        # for i in set_d:
-            # print(i)
+
         names = list(set_d)
         return names
 
+
+# For unique ID retireval, we sadly need to get each page and extract the TITLE form the top of th HTML
     def get_display_titles(self,cat_urls_cut,cat_names):
 
-        c = 0
         display_titles = []
+        # Monitor the progress with tqdm
         pbar = tqdm(total=len(cat_urls_cut))
         for url, name in zip(cat_urls_cut,cat_names):
-            if c <= 5:
-                c += 1
                 # Send HTTP request to site and save the response from server in a response object called r
                 r = requests.get(url)
                 # print(c)
@@ -155,29 +141,28 @@ class Scraper():
 
         pbar.close()
         titles_cut = []
+        # HTML Parsing and selection
         for title in display_titles:
             title = title[7:]
-            title = title.replace("&amp;","\\u0026")
+            title = title.replace("&amp;","\\u0026") # Here we replace the HTML version of and by a bit version, we will change this later back
             titles_cut.append(title)
         return titles_cut
 
+# Wrapper function, to get titles for each category
     def get_display_titles_wrapper(self,cat_names_damen,cat_names_herren, cat_urls_cut_damen, cat_urls_cut_herren):
-        sub_path = self.path + '/categories'
-        if not os.path.exists(sub_path):
-            os.makedirs(sub_path)
-        # print(sub_path)
 
+        # for both genders get the titles
         display_titles_damen = self.get_display_titles(cat_urls_cut_damen,cat_names_damen)
         display_titles_herren = self.get_display_titles(cat_urls_cut_herren,cat_names_herren)
 
-        
+        # Again for both genders, filter the doubles, so we get clean data
         titles_cut_with_count_damen = self.filter_doubles(display_titles_damen)
         titles_cut_with_count_herren = self.filter_doubles(display_titles_herren)
 
         return titles_cut_with_count_damen, titles_cut_with_count_herren
 
 
-
+    # A HTML parsing function, that gets a string and returns a property as substring, as well as the name of the property 
     def get_single_property(self, str:str,p:str):
         i = str.find(p)
         sub = str[i:]
@@ -190,9 +175,10 @@ class Scraper():
 
 
 
-
+    # Here for the overview page, we try to get the general info, that we can already exctract, e.g. item count, title, code etc.
     def get_dataframe(self, url, names, properties):
 
+        # Get the HTMl to parse
         index_page = self.get_html_from_url(url)
 
         for i in names:
@@ -223,7 +209,7 @@ class Scraper():
                 df = pd.DataFrame(dict_props, index=[0])
                 yield df
 
-
+    # Here we have the same function that yields a pandas.df from wanted properties of a single category by HTML parsing
     def get_dataframe_category(self, html,subs, props):
 
         for i in subs:
@@ -247,22 +233,22 @@ class Scraper():
 
             # convert the dictionary to a pandas DataFrame
             df = pd.DataFrame(dict_props, index=[0])
-            # print(df.head())
 
             yield df
 
-
+    # Here we get more detailed values for the announces of a single category and again yield it as a pandas.df
     def get_announces_by_category(self, category_id, nr_pages, props):
 
+        # The properties, we want to know, that we could filter by
         properties_announce = ['id','title','price','brand_title','size_title','user:id','login','profile_url'] 
 
         for page in tqdm(range(nr_pages), leave=False):
             try:
                     
                 url = "https://www.vinted.de/catalog?catalog[]={}&page{}".format(category_id,page+1)
-                # print(url)
+
                 html_string = self.get_html_from_url(url)
-                # print(html_string)
+
 
                 l = list(self.get_items_ids(html_string))
                 unique_id_references = ["\"id\":"+i for i in l]
@@ -271,14 +257,14 @@ class Scraper():
                 announces = list(self.get_dataframe_category(html=html_string, subs=unique_id_references, props= props))
 
                 announces_df = pd.concat(announces)
-                # print(announces_df.head())
-                # time.sleep(2)
+
                 yield announces_df
                 
             except Exception as e:
-                # logger.exception(e)
                 logger.error("Error getting Category Information".format(e))
 
+    # Functoin to retrieve the IDs that each category has, they are needed to get the urls, if we want to scrape page 2 or bigger of some category
+    # basically consists of a lot of substring parsing and splitting
     def get_items_ids(self, page):
         length = 1500
         s = "{\"catalogItems\":{\"ids\":"
@@ -295,24 +281,23 @@ class Scraper():
         for i in splt:
             yield i
 
-
+    # Scraper internal function to access and save data to our local database
     def save_to_Database(self, db,df):    
         print("Function called", flush=True)
         today = date.today()
         docs = None
         docs = db.retrieve_data(today)
-        if docs != None:
+        # Check if the df returned is non-empty
+        if not docs.empty :
             print(docs,flush=True)
+
         else:
             print("Returned nothing form db", flush=True)
 
 
-
+    # Function to be called from the outside, basically wrapper that uses all the predefined functions to scrape vinted.de
     def scrape(self, scheduled):
  
-    # db = DB_Connector(username=username,password=password,hostname=hostname)
-
-
 
 
         # Define the URL of the site
@@ -322,7 +307,7 @@ class Scraper():
 
         # Get CatNames
         cat_urls_cut_damen, cat_urls_cut_herren, cat_names_damen, cat_names_herren = self.get_cat_overview(url)
-
+        # Get the titles from sub-sites
         display_titles_women, display_titles_men = self.get_display_titles_wrapper(cat_names_damen,cat_names_herren,cat_urls_cut_damen, cat_urls_cut_herren)
 
         
@@ -336,32 +321,20 @@ class Scraper():
 
         df = pd.concat([combined_women, combined_men])
 
+        # Check that the values in id are actually useful numeric ints, otherwise remove the row in the dataframe
         df = df[df['id'] != 'null']
         df['overview'] = 1
         df['title'] = df['title'].str.replace('\\u0026', '&')
-        print(df.head())
-        # Check that there is no duplicates in list and have a look into the df
-    
-        # db.save_data(df)
-
-
-        # ==================================================
-        # ========= Get announces by category ==============
-        # ==================================================
-        
-
-        # Assuming df is your DataFrame and 'col_name' is your column
         df['id'] = pd.to_numeric(df['id'], errors='coerce')
         df = df.dropna(subset=['id'])
         df['id'] = df['id'].astype(np.int64)
 
-
+        # Create lists for looping
         cat_ids = df['id'].values.tolist()
         cat_titles = df['title'].values.tolist()
 
-        # cat_ids = cat_ids[cat_idss['id'].notna()]
-        # cat_ids = cat_ids[:10]
-        # print(cat_ids)
+
+        # Get information about the single categories and announces
         pbar = tqdm(total=len(cat_ids))
         for i, j in zip(cat_ids, cat_titles):
             try:
@@ -377,17 +350,16 @@ class Scraper():
                 print(e)
         pbar.close()
 
+        # replace the bit version before saving, so the plotting looks nice
         df['title'] = df['title'].str.replace('\\u0026', '&')
-
-        # print(df)
-        # print(type(df))
-        # print(df.shape[0])
 
         # Save to MongoDB Database
         try:
             self.db_connector.save_data(df)
         except Exception as e:
             logger.exception(e)
+        # For the scheduled version of this function, there is no df returned, it is just saved to the DB
+        # The return is just for the direct version that is initiated by the user/bot interaction
         if not scheduled:
             return df
 

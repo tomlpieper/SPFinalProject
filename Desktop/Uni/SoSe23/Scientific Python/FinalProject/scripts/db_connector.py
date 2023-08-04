@@ -1,4 +1,3 @@
-
 import os
 import time
 from datetime import date
@@ -7,85 +6,76 @@ import pandas as pd
 from loguru import logger
 
 
-
 class DB_Connector():
+    """
+    Database connector class which connects to MongoDB and provides methods to save and retrieve data.
+    """
 
     def __init__(self, username, password, hostname):
+        """
+        Initialize the database connector with MongoDB connection details.
+        """
 
         self.username = username
         self.password = password
         self.hostname = hostname
 
+        # Establish a connection with MongoDB
         self.client = MongoClient(f'mongodb://{self.username}:{self.password}@{self.hostname}:27017/')
+        
         # Use a database named "mydatabase"
         self.db = self.client["mydatabase"]
         
         # Use a collection (similar to a table in SQL) named "customers"
-        self.collection = self.db["customers"]
+        self.collection = self.db["scrapes"]
 
-        print('Connected to Database',flush=True)
-
-
-
-    # def test_save_and_retrieve_data(self):
-    #     # Create a connection
-    #     # Define some data to save
-    #     customer_data = {"name": "John", "address": "Highway 37"}
-        
-    #     # Save the data
-    #     collection.insert_one(customer_data)
-        
-    #     # Retrieve the data
-    #     result = collection.find_one({"name": "John"})
-        
-    #     # Check that the data is as expected
-    #     # print(assert result["name"] == "John")
-    #     assert result["name"] == "John"
-    #     print(result)
-    #     assert result["address"] == "Highway 37"
+        print('Connected to Database', flush=True)
 
     def save_data(self, dataframe):
+        """
+        Save the data in the provided dataframe to MongoDB.
+        """
 
-        
+        # Convert dataframe to a list of dictionaries
         data_dict = dataframe.to_dict("records")
+        
+        # Get today's date and format it as DD/MM/YYYY
         today = date.today()
         timestamp = today.strftime("%d/%m/%Y")
+        
+        # Add a timestamp to each dictionary
         for data in data_dict:
             data['timestamp'] = timestamp
 
+        # Check if data for today has already been saved
         validation_doc = self.collection.find_one({'timestamp': timestamp})
+        
+        # If not, insert the data into the database
         if not validation_doc:
             self.collection.insert_many(data_dict)
             logger.success('Successfully saved documents to database.')
         else: 
+            # If data for today has already been saved, log a warning
             logger.warning('Already saved Data today, nothing is saved')
 
-
-
-    # def retrieve_data(self,date):
-    #     # today = date.today()
-    #     if not type(date) == str:
-    #         timestamp = date.strftime("%d/%m/%Y")
-    #     else: 
-    #         timestamp = date
-    #     r = self.collection.find({'timestamp': timestamp})
-    #     docs = [doc for doc in r]
-    #     return docs
-
     def retrieve_data(self, date):
+        """
+        Retrieve data for the specified date from MongoDB.
+        """
+
+        # Format the date as DD/MM/YYYY
         if not isinstance(date, str):
             timestamp = date.strftime("%d/%m/%Y")
         else: 
             timestamp = date
+        
+        # Retrieve documents from the collection where timestamp matches the specified date
         r = self.collection.find({'timestamp': timestamp})
+        
+        # Create a list of all retrieved documents
         docs = [doc for doc in r]
 
-        # convert list of dictionaries to DataFrame
+        # Convert the list of dictionaries to a DataFrame
         df = pd.DataFrame(docs)
-        
-        # if df.empty:
-        #     return None
 
         return df
-# # Insert the data into the collection
-# # collection.insert_many(data_dict)

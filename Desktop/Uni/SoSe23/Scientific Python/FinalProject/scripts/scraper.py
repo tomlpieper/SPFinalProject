@@ -120,9 +120,12 @@ class Scraper():
     def get_display_titles(self,cat_urls_cut,cat_names):
 
         display_titles = []
+        c = 0
         # Monitor the progress with tqdm
         pbar = tqdm(total=len(cat_urls_cut))
         for url, name in zip(cat_urls_cut,cat_names):
+            if c <= 4:
+                c += 1
                 # Send HTTP request to site and save the response from server in a response object called r
                 r = requests.get(url)
                 # print(c)
@@ -338,7 +341,7 @@ class Scraper():
         pbar = tqdm(total=len(cat_ids))
         for i, j in zip(cat_ids, cat_titles):
             try:
-                announces = list(self.get_announces_by_category(i, 5, properties_announce))
+                announces = list(self.get_announces_by_category(i, 3, properties_announce))
                 df_cat = pd.concat(announces)
                 df_cat['cat_id'] = i
                 df_cat['cat_title'] = j
